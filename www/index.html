@@ -1,0 +1,301 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: https://ssl.gstatic.com; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'">
+  <script src="components/loader.js"></script>
+  <script src="lib/onsenui/js/onsenui.min.js"></script>
+
+  <link rel="stylesheet" href="components/loader.css">
+  <link rel="stylesheet" href="lib/onsenui/css/onsenui.css">
+  <link rel="stylesheet" href="lib/onsenui/css/onsen-css-components.css">
+  <link rel="stylesheet" href="css/style.css">
+
+  <script>
+        window.fn = {};
+
+        //ボタン押下でメニューを開く
+        window.fn.open = function(){
+            var menu = document.getElementById("menu");
+            menu.open();
+        };
+  
+        window.fn.load = function(page){
+              var content = document.getElementById("content");
+              var menu = document.getElementById("menu");
+              content.load(page).then(menu.close.bind(menu));
+        };
+        
+        // 画面が切り替わる度に呼ばれます
+    	document.addEventListener('init', function(event) {
+		  var page = event.target.id;
+          
+          //履歴画面を開いたとき
+          if(page == "history-page"){
+            console.log("履歴");
+            //ローカルストレージから取得する
+            var str = localStorage.getItem("historyList");
+            var history_item = JSON.parse(str);
+            // alert("json_arrayは"+json_array.name);
+            // console.log(json_array[0].shop.id);
+            // alert("strは"+str);
+            for (var i = 0; i < history_item.length; i++) {
+                $("#history-item").append(`<ons-list-item class="history-item"><span><img src="${history_item[i].ResultSet[0].Result[0].Image.Medium}"></span> <span class="center">${history_item[i].ResultSet[0].Result[0].Name}</span></ons-list-item>`);
+                // $("#favorite-shop").text(json_array[0].shop.id);
+            }
+            
+            }
+          
+          
+    	});
+        
+        
+        function set_localStorage(key,value){
+            // alert("set_localStorage");
+            // alert(key);
+            
+            //現在登録されているお気に入りリストに追加していく
+            // ローカルストレージからゲット
+            var json_obj=[];
+            var str = localStorage.getItem(key);
+            
+            //未登録の判定
+            if(str == null){
+                // alert("★");
+                //未登録の場合は、ダミーで空配列文字列'[]'をセットする
+                json_obj = JSON.parse("[]");
+                
+            }else{
+                // alert("★★");
+                json_obj = JSON.parse(str);
+            }
+            // alert("★★★");
+            //今回追加された情報を追加する
+            json_obj.push(value);
+
+            //ローカルストレージにセット
+            var str = JSON.stringify(json_obj);
+            localStorage.setItem(key, str);
+        }
+        
+  
+  
+    function scanBarcodeYahoo(){
+        window.plugins.barcodeScanner.scan(function(result){
+            alert("We got a barcode\n"+
+                    "Result:"+result.text+"\n"+
+                    "Format:"+result.format+"\n"+
+                    "Cancelled:"+result.cancelled);
+            var JAN = result.text;
+            // var JAN = 560151629803;
+            $.ajax({
+            url:"https://shopping.yahooapis.jp/ShoppingWebService/V1/json/itemSearch?appid=dj00aiZpPU9MTWVjZ3RhRGJ4eSZzPWNvbnN1bWVyc2VjcmV0Jng9OGY-&jan="+JAN,
+            type:"GET",
+            dataType:"json",
+            //通信成功時
+            }).done(function(data){
+                //ここに処理を書く
+               // alert("ajax成功");
+               // console.log(data.ResultSet[0].Result[0].Name);//yahoo
+               $("#Search1").html("");
+               $("#gazou1").html("");
+               $("#shohinName1").html("");
+               $("#Search1").append("Yahooでの検索結果");
+               if(data.ResultSet[0].Result[0].Name){
+                   $("#gazou1").append(`<img src="${data.ResultSet[0].Result[0].Image.Medium}">`);
+                   $("#shohinName1").append(`${data.ResultSet[0].Result[0].Name} (${data.ResultSet[0].Result[0].Category.Current.Name})`);
+                   set_localStorage("historyList", data);//local
+               }else{
+                   $("#gazou1").append("ありませんでした");
+               }
+            //通信失敗時
+            }).fail(function(data){
+               alert("ajax失敗");
+            });
+        })
+    }
+    
+    function scanBarcodeRakuten(){
+        window.plugins.barcodeScanner.scan(function(result){
+            alert("We got a barcode\n"+
+                    "Result:"+result.text+"\n"+
+                    "Format:"+result.format+"\n"+
+                    "Cancelled:"+result.cancelled);
+            var JAN = result.text;
+            // var JAN = 560151629803;
+            $.ajax({
+            url:"https://app.rakuten.co.jp/services/api/Product/Search/20170426?format=json&keyword="+JAN+"&applicationId=1030731042525490331",
+            type:"GET",
+            dataType:"json",
+            //通信成功時
+            }).done(function(data){
+                //ここに処理を書く
+               // alert("ajax成功");
+               // console.log(data.Products[0].Product.productName);//rakuten
+               $("#Search1").html("");
+               $("#gazou1").html("");
+               $("#shohinName1").html("");
+               $("#Search2").html("");
+               $("#gazou2").html("");
+               $("#shohinName2").html("");
+               $("#Search1").append("楽天での検索結果");
+               if(data.count!=0){
+                   $("#gazou1").append(`<img src="${data.Products[0].Product.mediumImageUrl}">`);
+                   $("#shohinName1").append(`${data.Products[0].Product.productName} (${data.Products[0].Product.genreName})`);
+                   // set_localStorage("historyList", data);//local
+               }else{
+                   $("#gazou1").append("ありませんでした");
+               }
+            //通信失敗時
+            }).fail(function(data){
+               alert("ajax失敗");
+            });
+        })
+    }
+    
+    
+    function scanBarcodeBoth(){
+        window.plugins.barcodeScanner.scan(function(result){
+            alert("We got a barcode\n"+
+                    "Result:"+result.text+"\n"+
+                    "Format:"+result.format+"\n"+
+                    "Cancelled:"+result.cancelled);
+            var JAN = result.text;
+            // var JAN = 889349096081;
+            $.ajax({
+            url:"https://shopping.yahooapis.jp/ShoppingWebService/V1/json/itemSearch?appid=dj00aiZpPU9MTWVjZ3RhRGJ4eSZzPWNvbnN1bWVyc2VjcmV0Jng9OGY-&jan="+JAN,
+            type:"GET",
+            dataType:"json",
+            //通信成功時
+            }).done(function(data){
+                //ここに処理を書く
+               // alert("ajax成功");
+               // console.log(data.ResultSet[0].Result[0].Name);//yahoo
+               $("#Search1").html("");
+               $("#gazou1").html("");
+               $("#shohinName1").html("");
+               $("#Search1").append("Yahooでの検索結果");
+               if(data.ResultSet[0].Result[0].Name){
+                   $("#gazou1").append(`<img src="${data.ResultSet[0].Result[0].Image.Medium}">`);
+                   $("#shohinName1").append(`${data.ResultSet[0].Result[0].Name} (${data.ResultSet[0].Result[0].Category.Current.Name})`);
+                   set_localStorage("historyList", data);//local
+               }else{
+                   $("#gazou1").append("ありませんでした");
+               }
+            //通信失敗時
+            }).fail(function(data){
+               alert("ajax失敗");
+            });
+            
+            $.ajax({
+            url:"https://app.rakuten.co.jp/services/api/Product/Search/20170426?format=json&keyword="+JAN+"&applicationId=1030731042525490331",
+            type:"GET",
+            dataType:"json",
+            //通信成功時
+            }).done(function(data){
+                //ここに処理を書く
+               // alert("ajax成功");
+               // console.log(data.Products[0].Product.productName);//rakuten
+               $("#Search2").html("");
+               $("#gazou2").html("");
+               $("#shohinName2").html("");
+               $("#Search2").append("楽天での検索結果");
+               if(data.count!=0){
+                   $("#gazou2").append(`<img src="${data.Products[0].Product.mediumImageUrl}">`);
+                   $("#shohinName2").append(`${data.Products[0].Product.productName} (${data.Products[0].Product.genreName})`);
+                   // set_localStorage("historyList", data);//local
+               }else{
+                   $("#gazou2").append("ありませんでした");
+               }
+            //通信失敗時
+            }).fail(function(data){
+               alert("ajax失敗");
+            });
+        })
+    }
+    
+    
+  </script>
+</head>
+<body>
+    <ons-navigator id="navigator" page="scan.html">
+    <ons-page>
+        <ons-splitter>
+                <ons-splitter-side id="menu" side="left" width="220px" collapse swipeable>
+                    <ons-page>
+                        <ons-list>
+                            <ons-list-item onClick="fn.load('scan.html')" tappable>
+                                <div class="left">
+                                    <ons-icon icon="home"></ons-icon>
+                                </div>
+                                <div>Home</div>
+                            </ons-list-item>
+                            
+                            <ons-list-item onClick="fn.load('history.html')" tappable>
+                                <div class="left">
+                                    <ons-icon icon="ion-ios-eye"></ons-icon>
+                                </div>
+                                <div>履歴(現在yahooのみ)</div>
+                            </ons-list-item>
+                            
+                        </ons-list>
+                    </ons-page>
+                </ons-splitter-side>
+                <ons-splitter-content id="content" page="scan.html"></ons-splitter-content>
+            </ons-splitter>
+    </ons-page>
+    </ons-navigator>
+        
+    <ons-template id="scan.html">
+    	<ons-page id="scan-page">
+            <ons-toolbar>
+                    <div class="left">
+                        <ons-toolber-button onClick="fn.open()">
+                            <ons-icon icon="ion-navicon"></ons-icon>
+                        </ons-toolber-button>
+                    </div>
+    				<div class="center">バーコードリーダー</div>
+	    	</ons-toolbar>
+            <div class="content" style="text-align: center"></div>
+            
+            <ons-button onClick="scanBarcodeYahoo()" value="スキャン" class="center" modifier="large--cta" id="yahooButton">yahoo</ons-button>
+            <ons-button onClick="scanBarcodeRakuten()" value="スキャン" class="center" modifier="large--cta" id="rakutenButton">楽天</ons-button>
+            <ons-button onClick="scanBarcodeBoth()" value="スキャン" class="center" modifier="large--cta" id="bothButton">両方でスキャン</ons-button>
+            <ons-list>
+            <ons-list-item><div id="Search1"></div></ons-list-item>
+            <ons-list-item><div id="gazou1"></div></ons-list-item>
+            <ons-list-item><div id="shohinName1"></div></ons-list-item>
+            <ons-list-item><div id="Search2"></div></ons-list-item>
+            <ons-list-item><div id="gazou2"></div></ons-list-item>
+            <ons-list-item><div id="shohinName2"></div></ons-list-item>
+            </ons-list>
+        </ons-page>
+    </ons-template>
+    
+    <ons-template id="history.html">
+    	<ons-page id="history-page">
+        <ons-toolbar>
+                    <div class="left">
+                        <ons-toolber-button onClick="fn.open()">
+                            <ons-icon icon="ion-navicon"></ons-icon>
+                        </ons-toolber-button>
+                    </div>
+    				<div class="center">履歴</div>
+				</ons-toolbar>
+                <div class="content" style="text-align: center">
+                    <ons-list class="history-item-list">
+    					<div><span id="history-item"></span></div>
+					</ons-list>
+                </div>
+                
+        </ons-page>
+    </ons-template>
+          
+</body>
+</html>
+
+
+
+
+
